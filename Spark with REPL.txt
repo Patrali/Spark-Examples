@@ -1,0 +1,170 @@
+=====================================================Playing with spark -- 1=====================================================
+spark2-shell --jars /hdfs01/shawn_sand/hadoop/target/avro-tools-1.8.2.jar --executor-memory 12G --executor-cores 6 --driver-memory 10g --conf spark.yarn.executor.memoryOverHead=2G
+ 
+
+scala>  val testFile=sc.textFile("file:///home/pbose/data/test/sherlock.txt");
+testFile: org.apache.spark.rdd.RDD[String] = file:///home/pbose/data/test/sherlock.txt MapPartitionsRDD[1] at textFile at <console>:24
+
+
+val count_the=testFile.flatMap(line=> line.split(" "));
+
+scala> testFile.count();
+res3: Long = 121706
+
+
+scala> val count_the=testFile.flatMap(line=> line.split(" ")).take(10);
+count_the: Array[String] = Array(The, Project, Gutenberg, EBook, of, The, Adventures, of, Sherlock, Holmes)
+
+scala> val count_the=testFile.flatMap(line=> line.split(" "));
+count_the: org.apache.spark.rdd.RDD[String] = MapPartitionsRDD[4] at flatMap at <console>:26
+
+scala> val something = count_the.collect();  <---- collect did not work when used take(10);
+
+scala> count_the.collect().take(10).foreach{println}
+The
+Project
+Gutenberg
+EBook
+of
+The
+Adventures
+of
+Sherlock
+Holmes
+
+
+=====================================================Playing with spark -- map vs flatmap =====================================================
+
+scala> val rdd = sc.parallelize(Seq("Roses are red", "Violets are blue"))
+rdd: org.apache.spark.rdd.RDD[String] = ParallelCollectionRDD[5] at parallelize at <console>:24
+
+scala> rdd.map(line=>line).collect().foreach{println}
+Roses are red
+Violets are blue
+
+
+scala> rdd.flatMap(line=>line).collect().foreach{println}
+R
+o
+s
+e
+s
+
+a
+r
+e
+
+r
+e
+d
+V
+i
+o
+l
+e
+t
+s
+
+a
+r
+e
+
+b
+l
+u
+e
+
+scala> rdd.flatMap(line=>line.split(" ")).collect().foreach{println}
+Roses
+are
+red
+Violets
+are
+blue
+
+
+
+scala> rdd.flatMap(line=>line.split(" ")).map(word=>(word,1)).collect().foreach{println}
+(Roses,1)
+(are,1)
+(red,1)
+(Violets,1)
+(are,1)
+(blue,1)
+
+ref:http://backtobazics.com/big-data/spark/apache-spark-reducebykey-example/
+scala> rdd.flatMap(line=>line.split(" ")).map(word=>(word,1)).reduceByKey(_ + _).collect().foreach{println}
+(are,2)
+(Violets,1)
+(Roses,1)
+(red,1)
+(blue,1)
+
+similar to :
+scala> rdd.flatMap(line=>line.split(" ")).map(word=>(word,1)).reduceByKey((a,b)=>a+b).collect().foreach{println}
+(are,2)
+(Violets,1)
+(Roses,1)
+(red,1)
+(blue,1)
+
+Now apply filter:
+scala> rdd.flatMap(line=>line.split(" ")).filter(_.startsWith("are")).map(word=>(word,1)).reduceByKey((a,b)=>a+b).collect().foreach{println}
+(are,2)
+
+
+
+
+scala> rdd.flatMap(line=>line.split(" ")).map(word=>(word,1)).reduceByKey(_ + _).foreach{println}
+
+--did not return any result . why? reduceByKey is a "transformation operation"
+
+===============================================     ===============================================
+scala>  val rdd = sc.parallelize(Seq("the Roses are red", "the Violets are blue"))
+rdd: org.apache.spark.rdd.RDD[String] = ParallelCollectionRDD[0] at parallelize at <console>:24
+
+scala> rdd.flatMap(line=>line.split(" ")).filter(word=>word.equals("the")).map(word=>(word,1)).reduceByKey((a,b)=>a+b).collect().foreach{println}
+(the,2)
+=============================================           ============================================================
+//range from 0 to 10000, increment by 1 and in 2 partitions
+scala> val o = sc.range(0,10000,1,2)
+
+scala> o.partitions.length
+res12: Int = 2
+
+
+scala> o.min()
+res14: Long = 0
+
+scala> o.max();
+res15: Long = 9999
+
+
+scala> o.filter(n=>(n%2==0)).collect().foreach{println}
+0
+2
+4
+6
+8
+
+
+scala> o.filter(  _ % 2 == 0).collect().take(5).foreach{println}
+0
+2
+4
+6
+8
+
+scala> import org.apache.spark.storage.StorageLevel._
+import org.apache.spark.storage.StorageLevel._
+
+scala> val r4 = o.filter(  _ % 2 == 0)
+r4: org.apache.spark.rdd.RDD[Long] = MapPartitionsRDD[8] at filter at <console>:29
+
+scala> r4.persist(MEMORY_ONLY)
+res12: r4.type = MapPartitionsRDD[8] at filter at <console>:29
+
+should show up here: pc1uoapxhad02.abacus-us.com:4040/storage/  <--- page 109
+
+
+
