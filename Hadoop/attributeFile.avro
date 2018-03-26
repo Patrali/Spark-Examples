@@ -1,0 +1,8 @@
+{"namespace": "attributeFile.avro",
+ "type": "record",
+ "name": "attributeFile",
+ "fields": [
+     {"name": "INDIVIDUAL_KEY", "type": "string"},
+     {"name": "ATTRIBUTES", "type": {"type" : "map", "values": "string"}}
+ ]
+}
